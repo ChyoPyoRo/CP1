@@ -6,29 +6,61 @@ const mongoose = require('mongoose')
 const config = require('./config/key');
 
 const port = 3000
-const bodyParser = require('body-parser')
-const {User} = require('./models/User.js')
+const { User } = require('./models/User.js')
+const cookieParser = require('cookie-parser')
 
-app.use(bodyParser.urlencoded({extended: true}));
-app.use(bodyParser.json());
 
-mongoose.connect(config.mongoURI, {  useNewUrlParser: true})
-.then(() => console.log('MongoDB connected...'))
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(cookieParser())
+
+mongoose.connect(config.mongoURI, {})
+  .then(() => console.log('MongoDB connected...'))
   .catch(error => console.log(error))
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
-app.post('/register', (req,res) => {
+app.post('/register', (req, res) => {
   const user = new User(req.body)
 
+
+
   user.save((error, userInfo) => {
-    if(error) return res.json({success: false, error})
+    if (error) return res.json({ success: false, error })
     return res.status(200).json({
-      success : true
+      success: true
     })
   })
 })
+
+app.post('/login', (req, res) => {
+  //요청된 이메일을 데이터베이스에서 찾는다
+  User.findOne({ email: req.body.email }, (err, userInfo) => {
+    if (!userInfo) {
+      return res.json({
+        loginSuccess: false,
+        message: "이메일이 일치하지 않습니다"
+      })
+    }
+    userInfo.comparePassword(req.body.password, (err, isMatch) =>{
+  
+      if(!isMatch)return res.json({loginSuccess:false, message: "비밀번호가 틀렸습니다"});
+      userInfo.generateToken((err, user) => {
+        console.log(11)
+        if (err) return res.status(400).send(err);
+        //토큰을 쿠키,로컬스토리지등에 저장할 수 있음, cookie에 x_auth라는 부분에 token 저장   
+        res.cookie("x_auth", user.token)
+          .status(200)
+          .json({ loginSuccess: true, userId: user._id })
+      })
+    })
+      
+    })
+  })
+
+
 
 app.listen(3000)
