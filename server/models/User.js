@@ -65,8 +65,8 @@ userSchema.methods.generateToken = function(cb){
     console.log(token);
     user.save(function(err, user){
         console.log(111);
-        if(err) {return cb(err);}
-        cb(null, user);
+        if(err) return cb(err);
+        cb(null, user)
 
     })
 }
